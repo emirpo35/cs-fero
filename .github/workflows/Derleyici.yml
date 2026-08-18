@@ -19,6 +19,8 @@
  jobs:
    CloudStreamDerleyici:
      runs-on: ubuntu-latest
+     permissions:
+      contents: write 
      steps:
        - name: "'src' Depo Kontrolü"
          uses: actions/checkout@v6
@@ -55,7 +57,7 @@
 
        - name: '@KekikAkademi ifadesini değiştir'
          run: |
-           sed -i 's/@KekikAkademi/@feroxxcs3/g' $GITHUB_WORKSPACE/builds/repo.json
+           sed -i 's/@KekikAkademi/@terox/g' $GITHUB_WORKSPACE/builds/repo.json
  
        - name: Derlemeleri Yükle
          run: |
