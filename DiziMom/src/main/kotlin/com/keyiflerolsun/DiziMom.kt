@@ -14,7 +14,7 @@ import org.jsoup.Jsoup
 
 class DiziMom : MainAPI() {
     override var mainUrl              = "https://www.dizimom.surf/"
-    override var name                 = "DiziMom"
+    override var name                 = "DiziMomla"
     override val hasMainPage          = true
     override var lang                 = "tr"
     override val hasQuickSearch       = false
