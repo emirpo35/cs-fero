@@ -151,7 +151,7 @@ class DiziMomemr : MainAPI() {
         val document = app.get(data, headers=ua, interceptor = interceptor).document
 
         val iframes     = mutableListOf<String>()
-        val mainIframe = document.selectFirst("div.video p iframe")?.attr("data-src") ?: return false
+        val mainIframe = document.selectFirst("div.video p iframe")?.attr("src") ?: return false
         iframes.add(mainIframe)
 
         document.select("div.sources a").forEach {
