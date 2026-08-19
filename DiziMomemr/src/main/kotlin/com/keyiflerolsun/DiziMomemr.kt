@@ -136,7 +136,7 @@ class DiziMomemr : MainAPI() {
 
         val ua = mapOf("User-Agent" to "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36")
 
-     /*   app.post(
+        app.post(
             "${mainUrl}/wp-login.php",
             headers = ua,
             referer = "${mainUrl}/",
@@ -147,7 +147,7 @@ class DiziMomemr : MainAPI() {
                 "redirect_to" to mainUrl,
             )
         )
-*/
+
         val document = app.get(data, headers=ua, interceptor = interceptor).document
 
         val iframes     = mutableListOf<String>()
