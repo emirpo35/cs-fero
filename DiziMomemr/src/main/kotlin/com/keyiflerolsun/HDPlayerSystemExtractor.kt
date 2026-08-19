@@ -38,13 +38,15 @@ Log.d("Kekik_${this.name}", "RESPONSE » ${response.text}")
        val responseText = response.text
 Log.d("Kekik_${this.name}", "RESPONSE » $responseText")
 
-val videoResponse = response.parsedSafe<SystemResponse>()
+al videoResponse = response.parsedSafe<SystemResponse>()
     ?: throw ErrorLoadingException("JSON parse failed: $responseText")
 
 Log.d("Kekik_${this.name}", "HLS » ${videoResponse.hls}")
 Log.d("Kekik_${this.name}", "VIDEO SOURCE » ${videoResponse.videoSource}")
 Log.d("Kekik_${this.name}", "SECURED LINK » ${videoResponse.securedLink}")
 
+val m3uLink = videoResponse.securedLink
+    ?: throw ErrorLoadingException("securedLink bulunamadı")
       callback.invoke(
     newExtractorLink(
         source = this.name,
