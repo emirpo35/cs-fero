@@ -34,34 +34,29 @@ open class HDPlayerSystem : ExtractorApi() {
                 "X-Requested-With" to "XMLHttpRequest"
             )
         )
+
         Log.d("Kekik_${this.name}", "RESPONSE » ${response.text}")
-        //val videoResponse = response.parsedSafe<SystemResponse>() ?: throw ErrorLoadingException("failed to parse response")
-        //val m3uLink       = videoResponse.securedLink
 
-val responseText = response.text
-Log.d("Kekik_${this.name}", "RESPONSE » $responseText")
+        val videoResponse = response.parsedSafe<SystemResponse>() ?: throw ErrorLoadingException("failed to parse response")
+        val m3uLink       = videoResponse.securedLink
 
-val videoResponse = response.parsedSafe<SystemResponse>()
-    ?: throw ErrorLoadingException("JSON parse failed: $responseText")
+        Log.d("Kekik_${this.name}", "HLS » ${videoResponse.hls}")
+        Log.d("Kekik_${this.name}", "VIDEO SOURCE » ${videoResponse.videoSource}")
+        Log.d("Kekik_${this.name}", "SECURED LINK » ${videoResponse.securedLink}")
 
-Log.d("Kekik_${this.name}", "HLS » ${videoResponse.hls}")
-Log.d("Kekik_${this.name}", "VIDEO SOURCE » ${videoResponse.videoSource}")
-Log.d("Kekik_${this.name}", "SECURED LINK » ${videoResponse.securedLink}")
-
-callback.invoke(
-    newExtractorLink(
-        source = this.name,
-        name = this.name,
-        url = m3uLink,
-        type = ExtractorLinkType.M3U8
-    ) {
-        quality = Qualities.Unknown.value
-        headers = mapOf(
-            "Referer" to extRef,
-            "Origin" to mainUrl
+        callback.invoke(
+            newExtractorLink(
+                source = this.name,
+                name = this.name,
+                url = m3uLink ?: throw ErrorLoadingException("m3u link not found"),
+                type = ExtractorLinkType.M3U8 // Tür olarak M3U8'yi belirtiyoruz
+            ) {
+                quality = Qualities.Unknown.value // Varsayılan kalite ayarlandı
+                /* referer = url // bunun yerine headers kodunu ekledim */
+                headers = mapOf("Referer" to url) // Referer burada başlıklar üzerinden ayarlandı
+                /* site açılmıyor şu anda o yüzden hata vermemesi için bunu kapatıyorum isM3u8 = true */
+            }
         )
-    }
-)
     }
 
     data class SystemResponse(
