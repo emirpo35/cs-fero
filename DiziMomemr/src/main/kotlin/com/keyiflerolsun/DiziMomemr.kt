@@ -13,7 +13,7 @@ import okhttp3.Response
 import org.jsoup.Jsoup
 
 class DiziMomemr : MainAPI() {
-    override var mainUrl              = "https://www.dizimom.surf/"
+    override var mainUrl              = "https://www.dizimom.diy"
     override var name                 = "DiziMomemr"
     override val hasMainPage          = true
     override var lang                 = "tr"
