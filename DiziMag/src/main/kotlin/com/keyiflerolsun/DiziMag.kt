@@ -41,8 +41,13 @@ class DiziMag : MainAPI() {
             else -> TvType.TvSeries
         }
 
-        // ✅ posterUrl doğrudan parametre
-        return newSearchResponse(name, fixUrl(href), type, posterUrl = fixUrl(poster))
+        // ✅ Doğrudan SearchResponse kur (newSearchResponse bu fork'ta yok)
+        return SearchResponse(
+            name = name,
+            url = fixUrl(href),
+            type = type,
+            posterUrl = fixUrl(poster)
+        )
     }
 
     // -------- 1. Ana Sayfa --------
@@ -157,8 +162,12 @@ class DiziMag : MainAPI() {
         val season = Regex("""/sezon-(\d+)""").find(href)?.groupValues?.get(1)?.toIntOrNull()
         val episode = Regex("""/bolum-(\d+)""").find(href)?.groupValues?.get(1)?.toIntOrNull()
 
-        // ✅ Episode(...) yerine newEpisode(...)
-        episodes.add(newEpisode(fixUrl(href), epName, season, episode))
+        // ✅ newEpisode(url, initializer: Episode.() -> Unit)
+        episodes.add(newEpisode(fixUrl(href)) {
+            this.name = epName
+            this.season = season
+            this.episode = episode
+        })
     }
 
     // -------- 4. Video Kaynakları --------
@@ -218,10 +227,8 @@ class DiziMag : MainAPI() {
                     ?.replace("\\u0026", "&")
 
                 if (!streamUrl.isNullOrBlank()) {
-                    // Extractor'ı dene
                     loadExtractor(streamUrl, data, subtitleCallback, callback)
 
-                    // ✅ newExtractorLink (import eklendi)
                     callback.invoke(
                         newExtractorLink(
                             "Pilavyer",
