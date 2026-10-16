@@ -4,6 +4,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.loadExtractor
+import com.lagradost.cloudstream3.utils.newExtractorLink
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import java.net.URLEncoder
@@ -40,9 +41,8 @@ class DiziMag : MainAPI() {
             else -> TvType.TvSeries
         }
 
-        return newSearchResponse(name, fixUrl(href), type) {
-            this.posterUrl = fixUrl(poster)
-        }
+        // ✅ posterUrl doğrudan parametre
+        return newSearchResponse(name, fixUrl(href), type, posterUrl = fixUrl(poster))
     }
 
     // -------- 1. Ana Sayfa --------
@@ -157,7 +157,8 @@ class DiziMag : MainAPI() {
         val season = Regex("""/sezon-(\d+)""").find(href)?.groupValues?.get(1)?.toIntOrNull()
         val episode = Regex("""/bolum-(\d+)""").find(href)?.groupValues?.get(1)?.toIntOrNull()
 
-        episodes.add(Episode(fixUrl(href), epName, season, episode))
+        // ✅ Episode(...) yerine newEpisode(...)
+        episodes.add(newEpisode(fixUrl(href), epName, season, episode))
     }
 
     // -------- 4. Video Kaynakları --------
@@ -217,8 +218,10 @@ class DiziMag : MainAPI() {
                     ?.replace("\\u0026", "&")
 
                 if (!streamUrl.isNullOrBlank()) {
+                    // Extractor'ı dene
                     loadExtractor(streamUrl, data, subtitleCallback, callback)
 
+                    // ✅ newExtractorLink (import eklendi)
                     callback.invoke(
                         newExtractorLink(
                             "Pilavyer",
