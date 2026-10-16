@@ -17,38 +17,39 @@ class DiziMag : MainAPI() {
     override val hasMainPage = true
 
     // -------- Yardımcı --------
-    private fun Element.toSearchResponse(): SearchResponse? {
-        val href = attr("href")
-        if (href.isBlank()) return null
-        if (href.contains("/sezon-") || href.contains("/bolum-")) return null
-        if (!href.contains("/dizi/") && !href.contains("/film/") && !href.contains("/anime/")) return null
-        if (Regex(".*/(diziler|filmler|animes)$").matches(href)) return null
+   private fun Element.toSearchResponse(): SearchResponse? {
+    val href = attr("href")
+    if (href.isBlank()) return null
+    if (href.contains("/sezon-") || href.contains("/bolum-")) return null
+    if (!href.contains("/dizi/") && !href.contains("/film/") && !href.contains("/anime/")) return null
+    if (Regex(".*/(diziler|filmler|animes)$").matches(href)) return null
 
-        val img = selectFirst("img") ?: return null
-        val name = selectFirst("h3")?.text()?.trim().orEmpty().ifBlank {
-            img.attr("alt")
-                .removeSuffix(" Dizi izle")
-                .removeSuffix(" Film izle")
-                .removeSuffix(" Anime izle")
-                .trim()
-        }
-        if (name.isBlank()) return null
-
-        val poster = img.attr("src").ifBlank { img.attr("data-src") }
-        val type = when {
-            href.contains("/film/") -> TvType.Movie
-            href.contains("/anime/") -> TvType.Anime
-            else -> TvType.TvSeries
-        }
-
-        // ✅ Doğrudan SearchResponse kur (newSearchResponse bu fork'ta yok)
-        return SearchResponse(
-            name = name,
-            url = fixUrl(href),
-            type = type,
-            posterUrl = fixUrl(poster)
-        )
+    val img = selectFirst("img") ?: return null
+    val name = selectFirst("h3")?.text()?.trim().orEmpty().ifBlank {
+        img.attr("alt")
+            .removeSuffix(" Dizi izle")
+            .removeSuffix(" Film izle")
+            .removeSuffix(" Anime izle")
+            .trim()
     }
+    if (name.isBlank()) return null
+
+    val poster = img.attr("src").ifBlank { img.attr("data-src") }
+    val fixedUrl = fixUrl(href)
+    val fixedPoster = fixUrl(poster)
+
+    return when {
+        href.contains("/film/") -> newMovieSearchResponse(name, fixedUrl, TvType.Movie) {
+            this.posterUrl = fixedPoster
+        }
+        href.contains("/anime/") -> newAnimeSearchResponse(name, fixedUrl, TvType.Anime) {
+            this.posterUrl = fixedPoster
+        }
+        else -> newTvSeriesSearchResponse(name, fixedUrl, TvType.TvSeries) {
+            this.posterUrl = fixedPoster
+        }
+    }
+}
 
     // -------- 1. Ana Sayfa --------
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse? {
