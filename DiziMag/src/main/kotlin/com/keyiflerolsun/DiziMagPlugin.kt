@@ -7,6 +7,6 @@ import android.content.Context
 @CloudstreamPlugin
 class DiziMagPlugin: Plugin() {
     override fun load(context: Context) {
-        registerMainAPI(DiziMAg())
+        registerMainAPI(DiziMag())
     }
 }
