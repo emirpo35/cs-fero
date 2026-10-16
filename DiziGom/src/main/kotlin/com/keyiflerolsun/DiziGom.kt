@@ -1,4 +1,4 @@
-com.keyiflerolsun
+package com.keyiflerolsun
 
 import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
