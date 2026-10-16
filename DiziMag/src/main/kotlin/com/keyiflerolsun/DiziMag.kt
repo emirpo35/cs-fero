@@ -171,7 +171,9 @@ class DizimagProvider : MainAPI() {
         episodes.add(Episode(fixUrl(href), epName, season, episode))
     }
 
- // -------- 4. Video Kaynakları --------
+    // -------- 4. Video Kaynakları --------
+ import java.net.URLEncoder
+
 override suspend fun loadLinks(
     data: String,
     isCasting: Boolean,
@@ -181,7 +183,7 @@ override suspend fun loadLinks(
     val document = Jsoup.parse(app.get(data).text)
     var found = false
 
-    // Klasik iframe'ler (nadiren de olsa olabilir)
+    // 1) Klasik iframe'ler (nadiren)
     document.select("iframe[src]").forEach { iframe ->
         val src = iframe.attr("src")
         if (src.isBlank()) return@forEach
@@ -190,81 +192,64 @@ override suspend fun loadLinks(
         found = true
     }
 
-    // Pilavyer core.js'inin yüklendiği domaini bul (BASE)
+    // 2) Pilavyer base URL
     var pilavBase = "https://play2.pilavyerplay.top"
-    document.select("script[src*='pilavyerplay'], script[src*='/core.js']").firstOrNull()?.let { s ->
-        val src = s.attr("src")
-        // https://play2.pilavyerplay.top/assets/js/core.js → https://play2.pilavyerplay.top
-        val m = Regex("""^(https?://[^/]+)""").find(src)
-        if (m != null) pilavBase = m.groupValues[1]
+    document.select("script[src*='pilavyerplay']").firstOrNull()?.let { s ->
+        Regex("""^(https?://[^/]+)""").find(s.attr("src"))?.let {
+            pilavBase = it.groupValues[1]
+        }
     }
 
-    // data-pv slug'larını topla
+    // 3) data-pv slug'ları
     val slugs = document.select("div[data-pv]").mapNotNull {
         it.attr("data-pv").takeIf { pv -> pv.isNotBlank() }
     }
 
     for (slug in slugs) {
-        // c.js'in yaptığı tam URL:
-        val sUrl = "$pilavBase/assets/js/s.php?s=" + java.net.URLEncoder.encode(slug, "UTF-8")
-
+        val sUrl = "$pilavBase/assets/js/s.php?s=" + URLEncoder.encode(slug, "UTF-8")
         try {
-            // Referer ZORUNLU (origin kilidi)
-            val playerHtml = app.get(
-                sUrl,
-                referer = data,
-                headers = mapOf(
-                    "Accept" to "text/html,application/xhtml+xml,*/*",
-                    "X-Requested-With" to "XMLHttpRequest",
-                )
-            ).text
+            // Referer KRİTİK (token "o":"ddizimag.com" içeriyor)
+            val playerHtml = app.get(sUrl, referer = data).text
 
-            val pdoc = Jsoup.parse(playerHtml, sUrl)
-
-            // 1) s.php içindeki iframe'ler
-            pdoc.select("iframe[src]").forEach { ifr ->
-                val s = ifr.attr("src")
-                if (s.isNotBlank()) {
-                    val fixed = if (s.startsWith("//")) "https:$s" else fixUrl(s, sUrl)
-                    loadExtractor(fixed, sUrl, subtitleCallback, callback)
-                    found = true
-                }
+            // --- Altyazılar (subs[] içindeki lang + src) ---
+            // Örnek: {"sid":"...","lang":"tr","label":"...","src":"https://.../sub.php?...&sid=...&token=..."}
+            Regex(
+                """\{[^{}]*?"lang"\s*:\s*"([^"]+)"[^{}]*?"src"\s*:\s*"([^"]+sub\.php[^"]*)"[^{}]*?\}""",
+                RegexOption.DOT_MATCHES_ALL
+            ).findAll(playerHtml).forEach { m ->
+                val lang = m.groupValues[1]
+                val subUrl = m.groupValues[2]
+                    .replace("\\/", "/")
+                    .replace("\\u0026", "&")
+                subtitleCallback.invoke(newSubtitleFile(lang, subUrl))
             }
 
-            // 2) <video><source> veya doğrudan m3u8/mp4
-            val directPatterns = listOf(
-                Regex("""["'](https?://[^"'\\\s]+\.m3u8[^"'\\\s]*)["']"""),
-                Regex("""["'](https?://[^"'\\\s]+\.mp4[^"'\\\s]*)["']"""),
-                Regex("""(?:file|source|src)\s*[:=]\s*["']([^"']+\.(?:m3u8|mp4)[^"']*)["']"""),
-            )
-            var directFound = false
-            directPatterns.forEach { p ->
-                p.findAll(playerHtml).forEach { m ->
-                    val u = m.groupValues[1]
-                    if (u.isNotBlank()) {
-                        callback.invoke(
-                            newExtractorLink("Pilavyer", "Pilavyer", u) {
-                                this.referer = sUrl
-                                this.quality = Qualities.Unknown.value
-                            }
-                        )
-                        found = true
-                        directFound = true
+            // --- Stream URL'i (HLS) ---
+            val streamUrl = Regex(""""stream"\s*:\s*"([^"]+)"""")
+                .find(playerHtml)?.groupValues?.get(1)
+                ?.replace("\\/", "/")
+                ?.replace("\\u0026", "&")
+
+            if (!streamUrl.isNullOrBlank()) {
+                // Önce extractor'ı dene (m3u8 tanınırsa çözebilir)
+                loadExtractor(streamUrl, data, subtitleCallback, callback)
+
+                // Extractor tanımadıysa doğrudan HLS olarak ekle
+                callback.invoke(
+                    newExtractorLink(
+                        source = "Pilavyer",
+                        name = "Pilavyer HLS",
+                        url = streamUrl
+                    ) {
+                        this.referer = data
+                        this.quality = Qualities.Unknown.value
+                        // CloudStream sürümüne göre: this.type = ExtractorLinkType.M3U8
                     }
-                }
-            }
-
-            // 3) Hiçbiri olmadıysa s.php URL'sini extractor'a bırak
-            if (!directFound && pdoc.select("iframe[src]").isEmpty()) {
-                loadExtractor(sUrl, data, subtitleCallback, callback)
+                )
                 found = true
             }
         } catch (_: Exception) {
-            // Sunucu yanıt vermezse yine de extractor dene
-            try {
-                loadExtractor(sUrl, data, subtitleCallback, callback)
-                found = true
-            } catch (_: Exception) { }
+            // sessizce devam
         }
     }
 
