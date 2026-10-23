@@ -13,9 +13,9 @@ buildscript {
     }
 
     dependencies {
+//jitpack tarafından verilen metadata bozuk...
         classpath("com.android.tools.build:gradle:9.1.1")
-        // classpath("com.github.recloudstream.gradle:gradle:master-SNAPSHOT")
-        classpath("com.github.recloudstream:gradle:-SNAPSHOT")
+        classpath(files("gradle-master-32895aedb6-1.jar"))
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.0")
     }
 }
@@ -50,7 +50,7 @@ subprojects {
 
     cloudstream {
         // when running through github workflow, GITHUB_REPOSITORY should contain current repository name
-        setRepo(System.getenv("GITHUB_REPOSITORY") ?: "https://github.com/emirpo35/cs-fero")
+        setRepo(System.getenv("GITHUB_REPOSITORY") ?: "https://github.com/feroxx/Kekik-cloudstream")
 
         authors = listOf("keyiflerolsun")
     }
