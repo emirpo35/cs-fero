@@ -16,40 +16,40 @@ class DiziMag : MainAPI() {
     override var lang = "tr"
     override val hasMainPage = true
 
-    // -------- Yardımcı --------
-   private fun Element.toSearchResponse(): SearchResponse? {
-    val href = attr("href")
-    if (href.isBlank()) return null
-    if (href.contains("/sezon-") || href.contains("/bolum-")) return null
-    if (!href.contains("/dizi/") && !href.contains("/film/") && !href.contains("/anime/")) return null
-    if (Regex(".*/(diziler|filmler|animes)$").matches(href)) return null
+    // -------- Yardımcı: Arama ve Anasayfa Yanıt Dönüştürücü --------
+    private fun Element.toSearchResponse(): SearchResponse? {
+        val href = attr("href")
+        if (href.isBlank()) return null
+        if (href.contains("/sezon-") || href.contains("/bolum-")) return null
+        if (!href.contains("/dizi/") && !href.contains("/film/") && !href.contains("/anime/")) return null
+        if (Regex(".*/(diziler|filmler|animes)$").matches(href)) return null
 
-    val img = selectFirst("img") ?: return null
-    val name = selectFirst("h3")?.text()?.trim().orEmpty().ifBlank {
-        img.attr("alt")
-            .removeSuffix(" Dizi izle")
-            .removeSuffix(" Film izle")
-            .removeSuffix(" Anime izle")
-            .trim()
+        val img = selectFirst("img") ?: return null
+        val name = selectFirst("h3")?.text()?.trim().orEmpty().ifBlank {
+            img.attr("alt")
+                .removeSuffix(" Dizi izle")
+                .removeSuffix(" Film izle")
+                .removeSuffix(" Anime izle")
+                .trim()
+        }
+        if (name.isBlank()) return null
+
+        val poster = img.attr("src").ifBlank { img.attr("data-src") }
+        val fixedUrl = fixUrl(href)
+        val fixedPoster = fixUrl(poster)
+
+        return when {
+            href.contains("/film/") -> newMovieSearchResponse(name, fixedUrl, TvType.Movie) {
+                this.posterUrl = fixedPoster
+            }
+            href.contains("/anime/") -> newAnimeSearchResponse(name, fixedUrl, TvType.Anime) {
+                this.posterUrl = fixedPoster
+            }
+            else -> newTvSeriesSearchResponse(name, fixedUrl, TvType.TvSeries) {
+                this.posterUrl = fixedPoster
+            }
+        }
     }
-    if (name.isBlank()) return null
-
-    val poster = img.attr("src").ifBlank { img.attr("data-src") }
-    val fixedUrl = fixUrl(href)
-    val fixedPoster = fixUrl(poster)
-
-    return when {
-        href.contains("/film/") -> newMovieSearchResponse(name, fixedUrl, TvType.Movie) {
-            this.posterUrl = fixedPoster
-        }
-        href.contains("/anime/") -> newAnimeSearchResponse(name, fixedUrl, TvType.Anime) {
-            this.posterUrl = fixedPoster
-        }
-        else -> newTvSeriesSearchResponse(name, fixedUrl, TvType.TvSeries) {
-            this.posterUrl = fixedPoster
-        }
-    }
-}
 
     // -------- 1. Ana Sayfa --------
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse? {
@@ -90,7 +90,7 @@ class DiziMag : MainAPI() {
         }
     }
 
-    // -------- 3. Detay --------
+    // -------- 3. Detay (Load) --------
     override suspend fun load(url: String): LoadResponse {
         val document = Jsoup.parse(app.get(url).text)
 
@@ -163,7 +163,6 @@ class DiziMag : MainAPI() {
         val season = Regex("""/sezon-(\d+)""").find(href)?.groupValues?.get(1)?.toIntOrNull()
         val episode = Regex("""/bolum-(\d+)""").find(href)?.groupValues?.get(1)?.toIntOrNull()
 
-        // ✅ newEpisode(url, initializer: Episode.() -> Unit)
         episodes.add(newEpisode(fixUrl(href)) {
             this.name = epName
             this.season = season
@@ -171,7 +170,7 @@ class DiziMag : MainAPI() {
         })
     }
 
-    // -------- 4. Video Kaynakları --------
+    // -------- 4. Video Kaynakları (Load Links) --------
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -181,7 +180,7 @@ class DiziMag : MainAPI() {
         val document = Jsoup.parse(app.get(data).text)
         var found = false
 
-        // Klasik iframe'ler
+        // Klasik iframe'ler (Eğer varsa)
         document.select("iframe[src]").forEach { iframe ->
             val src = iframe.attr("src")
             if (src.isBlank()) return@forEach
@@ -190,7 +189,7 @@ class DiziMag : MainAPI() {
             found = true
         }
 
-        // Pilavyer base URL
+        // Pilavyer tabanlı player için base URL tespiti (Gönderdiğiniz core.js ve HTML'e göre dinamik)
         var pilavBase = "https://play2.pilavyerplay.top"
         document.select("script[src*='pilavyerplay']").firstOrNull()?.let { s ->
             Regex("""^(https?://[^/]+)""").find(s.attr("src"))?.let {
@@ -198,43 +197,49 @@ class DiziMag : MainAPI() {
             }
         }
 
-        // data-pv slug'ları
-        val slugs: List<String> = document.select("div[data-pv]").mapNotNull { el ->
+        // HTML içindeki div[data-pv] slug değerini yakalama
+        val slugs = mutableListOf<String>()
+        document.select("div[data-pv]").forEach { el ->
             val pv = el.attr("data-pv")
-            if (pv.isNotBlank()) pv else null
+            if (pv.isNotBlank()) slugs.add(pv)
         }
 
         for (slug in slugs) {
             val sUrl = "$pilavBase/assets/js/s.php?s=" + URLEncoder.encode(slug, "UTF-8")
             try {
+                // Referer başlığı ile oynatıcı sayfasını çekiyoruz
                 val playerHtml = app.get(sUrl, referer = data).text
 
-                // Altyazılar
+                // Altyazıları çekme ve callback'e iletme
                 Regex(
-                    """\{[^{}]*?"lang"\s*:\s*"([^"]+)"[^{}]*?"src"\s*:\s*"([^"]+sub\.php[^"]*)"[^{}]*?\}""",
+                    """\{[^{}]*?"lang"\s*:\s*"([^"]+)"[^{}]*?"src"\s*:[^"]*?"([^"]+sub\.php[^"]*)"[^{}]*?\}""",
                     RegexOption.DOT_MATCHES_ALL
                 ).findAll(playerHtml).forEach { m ->
                     val lang = m.groupValues[1]
                     val subUrl = m.groupValues[2]
                         .replace("\\/", "/")
                         .replace("\\u0026", "&")
-                    subtitleCallback.invoke(newSubtitleFile(lang, subUrl))
+                    subtitleCallback.invoke(newSubtitleFile(lang, fixUrl(subUrl)))
                 }
 
-                // Stream URL'i
+                // HLS (.m3u8) Stream URL'ini yakalama
                 val streamUrl = Regex(""""stream"\s*:\s*"([^"]+)"""")
                     .find(playerHtml)?.groupValues?.get(1)
                     ?.replace("\\/", "/")
                     ?.replace("\\u0026", "&")
 
                 if (!streamUrl.isNullOrBlank()) {
-                    loadExtractor(streamUrl, data, subtitleCallback, callback)
+                    val fixedStreamUrl = if (streamUrl.startsWith("//")) "https:$streamUrl" else fixUrl(streamUrl)
+                    
+                    // Standart Extractor yükleyicisi ile dene
+                    loadExtractor(fixedStreamUrl, data, subtitleCallback, callback)
 
+                    // Doğrudan M3U8 linkini ekle
                     callback.invoke(
                         newExtractorLink(
                             "Pilavyer",
                             "Pilavyer HLS",
-                            streamUrl,
+                            fixedStreamUrl,
                             ExtractorLinkType.M3U8
                         ) {
                             this.referer = data
@@ -243,7 +248,7 @@ class DiziMag : MainAPI() {
                     found = true
                 }
             } catch (_: Exception) {
-                // sessizce geç
+                // Hata durumunda sessizce geç ve diğer slugları dene
             }
         }
 
