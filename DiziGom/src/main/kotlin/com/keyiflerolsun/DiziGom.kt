@@ -179,40 +179,30 @@ class DiziGom : MainAPI() {
         return newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = posterUrl }
     }
 
-    override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        val objectMapper = ObjectMapper().registerModule(KotlinModule.Builder().build())
-        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-        
-        Log.d("DZG", "data » $data")
-        val document = app.get(data, referer = "$mainUrl/").document
-        
-        // 1. Yöntem: Sayfadaki embed/content URL'sini JSON veya script üzerinden çekiyorsanız:
-        val embed = document.selectFirst("div#content")?.selectFirst("script")?.data()
-        if (!embed.isNullOrEmpty()) {
-            val contentJson: Gof = objectMapper.readValue(embed)
-            val targetUrl = contentJson.contentUrl // veya contentJson.embedUrl
-            
-            Log.d("DZG", "Hedef URL » $targetUrl")
-            
-            // loadExtractor fonksiyonunu kullanarak otomatik çözümleme yapıyoruz:
-            // Bu fonksiyon url'in hangi servise (Ok.ru, vb.) ait olduğunu anlar ve 
-            // bulduğu video bağlantılarını otomatik olarak 'callback' e aktarır.
-            loadExtractor(targetUrl, "$mainUrl/", subtitleCallback, callback)
-        } else {
-            // 2. Yöntem: Eğer doğrudan sayfada bir iframe varsa:
-            val iframeUrl = document.selectFirst("iframe")?.attr("src")
-            if (!iframeUrl.isNullOrEmpty()) {
-                loadExtractor(iframeUrl, "$mainUrl/", subtitleCallback, callback)
-            }
-        }
+ override suspend fun loadLinks(
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    Log.d("DZG", "data » $data")
+    val document = app.get(data, referer = "$mainUrl/").document
+    
+    // Doğrudan video-container içerisindeki iframe'i hedef alıyoruz
+    val iframeUrl = document.selectFirst("div.video-container iframe")?.attr("src")
+        ?: document.selectFirst("iframe")?.attr("src") // Yedek olarak sayfadaki herhangi bir iframe
 
-        return true
+    if (!iframeUrl.isNullOrEmpty()) {
+        Log.d("DZG", "Hedef İframe URL » $iframeUrl")
+        
+        // loadExtractor fonksiyonu ile Ok.ru vb. servisler otomatik çözülür
+        loadExtractor(iframeUrl, "$mainUrl/", subtitleCallback, callback)
+    } else {
+        Log.d("DZG", "Geçerli bir video iframe'i bulunamadı.")
     }
+
+    return true
+}
 
     data class Go(
         @JsonProperty("file") val file: String,
