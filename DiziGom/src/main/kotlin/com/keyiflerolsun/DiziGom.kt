@@ -30,6 +30,8 @@ import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.JsUnpacker
 import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.newExtractorLink
+import com.lagradost.cloudstream3.utils.AppUtils.tryToParseJson
+import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
 class DiziGom : MainAPI() {
@@ -184,37 +186,30 @@ class DiziGom : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val objectMapper = ObjectMapper().registerModule(KotlinModule.Builder().build())
-        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        Log.d("DZG", "data » ${data}")
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        
+        Log.d("DZG", "data » $data")
         val document = app.get(data, referer = "$mainUrl/").document
-        Log.d("Docum", document.toString())
+        
+        // 1. Yöntem: Sayfadaki embed/content URL'sini JSON veya script üzerinden çekiyorsanız:
         val embed = document.selectFirst("div#content")?.selectFirst("script")?.data()
-        val contentJson: Gof = objectMapper.readValue(embed!!)
-        Log.d("DZG", "iframe » ${contentJson.contentUrl}")
-        val iframeDocument = app.get(
-            contentJson.contentUrl.replace("https://", "https://play."),
-            referer = "$mainUrl/"
-        ).document
-        val script =
-            iframeDocument.select("script").find { it.data().contains("eval(function(p,a,c,k,e") }
-                ?.data()
-                ?: ""
-        val unpack = JsUnpacker(script).unpack()
-        val sourceJ = unpack?.substringAfter("sources:[")?.substringBefore("]")?.replace("\\/", "/")
-        Log.d("DZG", "sourceJ » ${sourceJ}")
-
-        val source: Go = objectMapper.readValue(sourceJ!!)
-        callback.invoke(
-            newExtractorLink(
-                source = this.name,
-                name = this.name,
-                url = source.file,
-                ExtractorLinkType.M3U8
-            ) {
-                this.referer = "$mainUrl/"
-                this.quality = getQualityFromName(source.label)
+        if (!embed.isNullOrEmpty()) {
+            val contentJson: Gof = objectMapper.readValue(embed)
+            val targetUrl = contentJson.contentUrl // veya contentJson.embedUrl
+            
+            Log.d("DZG", "Hedef URL » $targetUrl")
+            
+            // loadExtractor fonksiyonunu kullanarak otomatik çözümleme yapıyoruz:
+            // Bu fonksiyon url'in hangi servise (Ok.ru, vb.) ait olduğunu anlar ve 
+            // bulduğu video bağlantılarını otomatik olarak 'callback' e aktarır.
+            loadExtractor(targetUrl, "$mainUrl/", subtitleCallback, callback)
+        } else {
+            // 2. Yöntem: Eğer doğrudan sayfada bir iframe varsa:
+            val iframeUrl = document.selectFirst("iframe")?.attr("src")
+            if (!iframeUrl.isNullOrEmpty()) {
+                loadExtractor(iframeUrl, "$mainUrl/", subtitleCallback, callback)
             }
-        )
+        }
 
         return true
     }
