@@ -134,51 +134,36 @@ class DiziMom : MainAPI() {
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
         Log.d("DZM", "data » $data")
 
-        val ua = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        val ua = mapOf("User-Agent" to "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36")
 
-        // Ana sayfaya giriş simülasyonu (çerez almak için)
-        try {
-            app.post(
-                "${mainUrl}/wp-login.php",
-                headers = ua,
-                referer = "${mainUrl}/",
-                data    = mapOf(
-                    "log"         to "keyiflerolsun",
-                    "pwd"         to "12345",
-                    "rememberme"  to "forever",
-                    "redirect_to" to mainUrl,
-                )
+        app.post(
+            "${mainUrl}/wp-login.php",
+            headers = ua,
+            referer = "${mainUrl}/",
+            data    = mapOf(
+                "log"         to "keyiflerolsun",
+                "pwd"         to "12345",
+                "rememberme"  to "forever",
+                "redirect_to" to mainUrl,
             )
-        } catch (e: Exception) {
-            Log.d("DZM", "Login hata: ${e.message}")
-        }
+        )
 
-        val document = app.get(data, headers = ua, interceptor = interceptor).document
+        val document = app.get(data, headers=ua, interceptor = interceptor).document
 
-        val iframes = mutableListOf<String>()
-        val mainIframe = document.selectFirst("div.video p iframe")?.attr("src") 
-            ?: document.selectFirst("div.video-container iframe")?.attr("src") 
-            ?: return false
+        val iframes     = mutableListOf<String>()
+        val mainIframe = document.selectFirst("div.video p iframe")?.attr("src") ?: return false
         iframes.add(mainIframe)
 
-        document.select("div.sources a").forEach { source ->
-            val sourceHref = source.attr("href")
-            try {
-                val subDocument = app.get(sourceHref, headers = ua, referer = data, interceptor = interceptor).document
-                val subIframe   = subDocument.selectFirst("div.video p iframe")?.attr("src")
-                    ?: subDocument.selectFirst("div.video-container iframe")?.attr("src")
-                    ?: return@forEach
+        document.select("div.sources a").forEach {
+            val subDocument = app.get(it.attr("href"), headers=ua, interceptor = interceptor).document
+            val subIframe   = subDocument.selectFirst("div.video p iframe")?.attr("src") ?: return@forEach
 
-                iframes.add(subIframe)
-            } catch (e: Exception) {
-                Log.d("DZM", "Source hata: ${e.message}")
-            }
+            iframes.add(subIframe)
         }
 
         for (iframe in iframes) {
-            Log.d("DZM", "Çözülecek iframe » $iframe")
-            // Extractor çağrılırken referer olarak ana dizinin linkini veriyoruz
-            loadExtractor(iframe, data, subtitleCallback, callback)
+            Log.d("DZM", "iframe » $iframe")
+            loadExtractor(iframe, "${mainUrl}/", subtitleCallback, callback)
         }
 
         return true
