@@ -473,24 +473,26 @@ class Dizilla : MainAPI() {
         }
     }
 
-    private fun fixPosterUrl(url: String?): String? {
-        if (url.isNullOrEmpty()) return url
+   private fun fixPosterUrl(url: String?): String? {
+    if (url.isNullOrEmpty()) return null
 
-        // AMP CDN URL'lerini temizle:
-        // Örn: https://images-macellan-online.cdn.ampproject.org/i/s/images.macellan.online/...
-        // Sonuç: https://images.macellan.online/...
-        return if (url.contains("cdn.ampproject.org")) {
-            val regex = Regex("""cdn\.ampproject\.org/[^/]+/s/(.+)$""")
-            val match = regex.find(url)
-            if (match != null) {
-                "https://${match.groupValues[1]}"
-            } else {
-                url
-            }
-        } else {
-            url
-        }
+    var cleanUrl = url
+    if (cleanUrl.startsWith("//")) {
+        cleanUrl = "https:$cleanUrl"
     }
+
+    return if (cleanUrl.contains("cdn.ampproject.org")) {
+        val regex = Regex("""cdn\.ampproject\.org/[^/]+/s/(.+)$""")
+        val match = regex.find(cleanUrl)
+        if (match != null) {
+            "https://${match.groupValues[1]}"
+        } else {
+            cleanUrl
+        }
+    } else {
+        cleanUrl
+    }
+}
     private fun decryptDizillaResponse(response: String): String? {
         try {
             val fullData = Base64.decode(response, Base64.DEFAULT)
