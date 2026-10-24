@@ -221,27 +221,33 @@ class Dizilla : MainAPI() {
                 val resultArray = objectMapper.readTree(resultArrayJson)
                 println("Dizilla DEBUG - resultArray isArray: ${resultArray.isArray}, size: ${resultArray.size()}")
 
-                val home = resultArray.mapNotNull { item ->
+val home = resultArray.mapNotNull { item ->
                     val title = item.get("original_title")?.asText() ?:
                     item.get("culture_title")?.asText() ?:
                     item.get("title")?.asText() ?:
                     return@mapNotNull null
 
-                    val poster = item.get("poster_url")?.asText() ?:
+                    // Poster URL seçeneklerini sırayla alıyoruz
+                    val rawPoster = item.get("poster_url")?.asText() ?:
                     item.get("square_url")?.asText() ?:
                     item.get("face_url")?.asText() ?:
                     item.get("back_url")?.asText()
 
-                    // itemString: JSON'ın tamamını içeren ham metin (String)
-// item değişkenini (JsonNode) String'e çevirip Regex'e sokuyoruz
+                    // 1. Poster linkini önce fixPosterUrl ile temizliyoruz
+                    // 2. Ardından fixUrl ile tam URL haline getiriyoruz
+                    val finalPoster = fixPosterUrl(rawPoster)?.let { fixUrl(it) }
+
                     val slug = Regex("""\"serie_site_id\":0,.*?\"used_slug\":\"(.*?)\"""").find(item.toString())?.groupValues?.get(1) ?: ""
+                    
                     newTvSeriesSearchResponse(title, fixUrl(slug), TvType.TvSeries) {
-                        this.posterUrl = fixUrlNull(poster)
+                        this.posterUrl = finalPoster
                     }
                 }
 
                 println("Dizilla DEBUG - Found ${home.size} items")
                 return newHomePageResponse(request.name, home)
+
+                
 
             } else {
                 // Diğer case'ler (HTML parsing)
