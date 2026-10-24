@@ -1,7 +1,7 @@
-version = 21
+version = 1
 
 cloudstream {
-    authors     = listOf("keyiflerolsun")
+    authors     = listOf("blackhope01")
     language    = "tr"
     description = "Her türlü filmi ister dublaj ister altyazılı, en kaliteli bir şekilde izleyebileceğiniz arşivi en geniş gerçek film izleme siteniz."
 
@@ -13,6 +13,6 @@ cloudstream {
      * 3: Beta only
     **/
     status  = 1 // will be 3 if unspecified
-    tvTypes = listOf("Movie")
-    iconUrl = "https://www.google.com/s2/favicons?domain=webteizle3.xyz&sz=%size%"
+    tvTypes = listOf("Movie", "TvSeries")
+    iconUrl = "https://www.google.com/s2/favicons?domain=https://webteizle3.xyz&sz=%size%"
 }

@@ -1,7 +1,7 @@
-version = 64
+version = 10
 
 cloudstream {
-    authors     = listOf("keyiflerolsun")
+    authors     = listOf("blackhope01")
     language    = "tr"
     description = "Binlerce yerli yabancı dizi arşivi, tüm sezonlar, kesintisiz bölümler. Sadece dizi izle, Dizimom heryerde seninle!"
 
@@ -13,6 +13,6 @@ cloudstream {
      * 3: Beta only
     **/
     status  = 1 // will be 3 if unspecified
-    tvTypes = listOf("TvSeries")
-    iconUrl = "https://www.google.com/s2/favicons?domain=www.dizimom.plus&sz=%size%"
+    tvTypes = listOf("Movie", "TvSeries")
+    iconUrl = "https://www.google.com/s2/favicons?domain=https://www.dizimom.surf&sz=%size%"
 }
