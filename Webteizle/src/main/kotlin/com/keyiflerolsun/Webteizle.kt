@@ -1,4 +1,4 @@
-package com.blackhope01
+package com.keyiflerolsun
 
 import android.util.Log
 import com.lagradost.cloudstream3.*
@@ -153,8 +153,6 @@ class Webteizle : MainAPI() {
             if (trailer != null) addTrailer(trailer)
         }
     }
-
-    // Loadlinks function
 
     override suspend fun loadLinks(
         data: String,
@@ -343,5 +341,4 @@ class Webteizle : MainAPI() {
 
         return found
     }
-
 }

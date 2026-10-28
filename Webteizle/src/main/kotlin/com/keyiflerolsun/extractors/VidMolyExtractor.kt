@@ -1,4 +1,4 @@
-package com.blackhope01.extractors
+package com.keyiflerolsun.extractors
 
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.app
@@ -6,6 +6,7 @@ import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.utils.newExtractorLink
 
 class VidMolyExtractor : ExtractorApi() {
     override val name = "VidMoly"
@@ -38,16 +39,18 @@ class VidMolyExtractor : ExtractorApi() {
             if (match != null) {
                 val hlsUrl = match.groupValues[1]
                 callback.invoke(
-                    ExtractorLink(
+                    newExtractorLink(
                         source = name,
                         name = displayName,
                         url = hlsUrl,
-                        referer = referer ?: url,
-                        quality = Qualities.Unknown.value,
-                        type = ExtractorLinkType.M3U8
-                    )
+                    ) {
+                        this.referer = referer ?: url
+                        this.quality = Qualities.Unknown.value
+                        this.type = ExtractorLinkType.M3U8
+                    }
                 )
                 return
             }
         }
-    }}
+    }
+}

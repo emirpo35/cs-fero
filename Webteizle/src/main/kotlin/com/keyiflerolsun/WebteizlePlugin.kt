@@ -1,10 +1,9 @@
-package com.blackhope01
+package com.keyiflerolsun
 
 import android.content.Context
-import com.blackhope01.extractors.VidMolyExtractor
+import com.keyiflerolsun.extractors.VidMolyExtractor
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
-
 
 @CloudstreamPlugin
 class WebteizlePlugin: Plugin() {
