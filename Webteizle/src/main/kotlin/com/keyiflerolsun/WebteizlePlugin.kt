@@ -5,6 +5,7 @@ import com.keyiflerolsun.extractors.VidMolyExtractor
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
 
+
 @CloudstreamPlugin
 class WebteIzlePlugin: Plugin() {
     override fun load(context: Context) {
