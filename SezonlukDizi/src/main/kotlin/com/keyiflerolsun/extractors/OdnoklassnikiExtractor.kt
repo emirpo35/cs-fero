@@ -1,4 +1,4 @@
-package com.blackhope01.extractors
+package com.keyiflerolsun.extractors
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.ErrorLoadingException

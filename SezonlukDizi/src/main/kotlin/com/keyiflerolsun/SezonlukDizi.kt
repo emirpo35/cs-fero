@@ -1,4 +1,4 @@
-package com.blackhope01
+package com.keyiflerolsun
 
 import android.util.Log
 import com.lagradost.cloudstream3.*
@@ -175,10 +175,9 @@ class SezonlukDizi : MainAPI() {
                 }
                 ?: return false
 
-            // Dublaj referer: /slug/1-sezon-1-bolum.html -> /slug/dublaj/1-sezon-1-bolum.html
             val lastSlash = data.lastIndexOf("/")
-            val base = data.substring(0, lastSlash)      // https://.../chernobyl
-            val bolumFile = data.substring(lastSlash + 1) // 1-sezon-1-bolum.html
+            val base = data.substring(0, lastSlash)
+            val bolumFile = data.substring(lastSlash + 1)
             val dublajReferer = "$base/dublaj/$bolumFile"
 
             val diller = listOf(
