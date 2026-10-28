@@ -6,9 +6,9 @@ import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
 
 @CloudstreamPlugin
-class WebteizlePlugin: Plugin() {
+class WebteIzlePlugin: Plugin() {
     override fun load(context: Context) {
-        registerMainAPI(Webteizle())
+        registerMainAPI(WebteIzle())
         registerExtractorAPI(VidMolyExtractor())
     }
 }

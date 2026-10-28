@@ -11,9 +11,9 @@ import org.json.JSONObject
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
-class Webteizle : MainAPI() {
+class WebteIzle : MainAPI() {
     override var mainUrl = "https://webteizle3.xyz"
-    override var name = "Webteizle"
+    override var name = "WebteIzle"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = false
