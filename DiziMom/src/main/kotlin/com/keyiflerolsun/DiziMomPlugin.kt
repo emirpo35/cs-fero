@@ -1,7 +1,7 @@
-package com.blackhope01
+package com.keyiflerolsun
 
 import android.content.Context
-import com.blackhope01.extractors.HdPlayerExtractor
+import com.keyiflerolsun.extractors.HdPlayerExtractor
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
 
@@ -9,7 +9,6 @@ import com.lagradost.cloudstream3.plugins.Plugin
 class DiziMomPlugin: Plugin() {
     override fun load(context: Context) {
         registerMainAPI(DiziMom())
-
         registerExtractorAPI(HdPlayerExtractor())
     }
 }
