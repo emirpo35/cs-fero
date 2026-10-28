@@ -38,9 +38,12 @@ class SezonlukDizi : MainAPI() {
     private fun org.jsoup.nodes.Element.toSearchResult(): SearchResponse? {
         val href = fixUrlNull(this.attr("href")) ?: return null
         if (!href.contains("/diziler/")) return null
-        val title = this.selectFirst("img")?.attr("alt")?.trim()
-            ?: this.text().trim()
-            ?: return null
+        
+        val altTitle = this.selectFirst("img")?.attr("alt")?.trim()
+        val rawText = this.text().trim()
+        val title = if (!altTitle.isNullOrBlank()) altTitle else rawText
+        if (title.isBlank()) return null
+
         val img = this.selectFirst("img")
         val poster = fixUrlNull(img?.attr("data-src")) ?: fixUrlNull(img?.attr("src"))
         val text = this.text()
