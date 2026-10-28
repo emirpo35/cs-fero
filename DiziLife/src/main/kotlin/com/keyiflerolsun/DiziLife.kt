@@ -1,4 +1,4 @@
-package com.blackhope01
+package com.keyiflerolsun
 
 import android.util.Log
 import com.lagradost.cloudstream3.*
@@ -9,7 +9,6 @@ import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import org.jsoup.nodes.Element
 import java.net.URLEncoder
-
 
 class DiziLife : MainAPI() {
     override var mainUrl = "https://dizi82.life"
@@ -37,7 +36,6 @@ class DiziLife : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         Log.d(name, "getMainPage - Sayfa: $page, Kategori: ${request.name}")
 
-        // Platform sayfaları, ana listede sadece dizi içerikleri gösterilmesi için işaretlendi
         val isPlatform = request.data.contains("/platform/")
 
         val url = if (page > 1) {
@@ -59,7 +57,6 @@ class DiziLife : MainAPI() {
 
         val document = app.get(url).document
 
-        // Platform sayfalarında sadece dizi linklerini seç (filmler karışmasın)
         val selector = if (isPlatform) {
             "a[href*='/dizi/']"
         } else {
@@ -77,7 +74,6 @@ class DiziLife : MainAPI() {
     private fun Element.toSearchResult(): SearchResponse? {
         val href = fixUrlNull(this.attr("href")) ?: return null
 
-        // Bölüm ve sezon linklerini önerilerden / aramalardan çıkar
         if (Regex("""/(sezon|bolum)/\d+""").containsMatchIn(href)) return null
 
         val title = this.selectFirst(".font-display")?.text()?.trim()
@@ -131,34 +127,28 @@ class DiziLife : MainAPI() {
 
         val title = document.selectFirst("h1")?.text()?.trim() ?: return null
 
-        // Poster öncelikli: detay sayfasındaki poster görseli
         val poster = fixUrlNull(document.selectFirst("img[alt*='posteri']")?.attr("src"))
             ?: fixUrlNull(document.selectFirst(".bg-card img")?.attr("src"))
             ?: fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content"))
 
-        // IMDb puanı: başlık bloğundaki .text-gold elementinin kendi metninden al
         val headerBlock = document.selectFirst("h1")?.parent()
         val imdbScore = headerBlock?.selectFirst(".text-gold")?.ownText()?.trim()?.toFloatOrNull()
 
-        // Yıl: başlık bloğundaki ilk .text-text-dim metninden
         val year = headerBlock?.selectFirst(".text-text-dim")?.text()?.let { text ->
             Regex("""\b(19|20)\d{2}\b""").find(text)?.value?.toIntOrNull()
         }
 
         val plot = document.selectFirst("p.text-text-dim")?.text()?.trim()
 
-        // Türler: sayfadaki /tur/ bağlantılarından
         val tags = document.select("a[href*='/tur/']")
             .map { it.text().trim() }
             .filter { it.isNotEmpty() }
             .distinct()
 
-        // Toplam süre (varsa)
         val totalDuration = Regex("""(\d+)\s*dk""")
             .find(document.text())
             ?.groupValues?.get(1)?.toIntOrNull()
 
-        // Öneriler: yalnızca medya kartları (bölüm linkleri hariç)
         val recommendations = document.select("a[href*='/dizi/'], a[href*='/film/']")
             .mapNotNull { it.toSearchResult() }
             .distinctBy { it.url }
@@ -166,7 +156,6 @@ class DiziLife : MainAPI() {
         Log.d(name, "load tamamlandı - Başlık: $title, Yıl: $year, IMDb: $imdbScore, Dizi: $isSeries")
 
         return if (isSeries) {
-            // Yalnızca içinde img bulunan bölüm linklerini işle (ana liste)
             val episodeElements = document.select("a[href*='/sezon/'][href*='/bolum/']")
                 .filter { it.selectFirst("img") != null }
 
@@ -237,7 +226,6 @@ class DiziLife : MainAPI() {
             return false
         }
 
-        // ID'yi çıkar: /player/{ID} kısmını yakala
         val videoId = Regex("""/player/([^/?]+)""").find(iframeSrc)?.groupValues?.get(1)
             ?: iframeSrc.substringAfterLast("/")
 
@@ -249,7 +237,6 @@ class DiziLife : MainAPI() {
         val m3u8Url = "https://one.makesomthingup.click/$videoId/master.m3u8"
         Log.d(name, "loadLinks - m3u8 URL: $m3u8Url")
 
-        // Doğrudan oynatılabilir HLS linki oluştur ve callback'e gönder
         callback.invoke(
             newExtractorLink(
                 source = this.name,

@@ -1,4 +1,4 @@
-package com.blackhope01
+package com.keyiflerolsun
 
 import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
