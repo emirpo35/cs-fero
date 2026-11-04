@@ -10,7 +10,7 @@ import org.jsoup.nodes.Element
 import java.net.URLEncoder
 
 class DiziMag : MainAPI() {
-    override var mainUrl = "https://ddizimag.com"
+    override var mainUrl = "https://ddizimag.icu"
     override var name = "Dizimag"
     override val supportedTypes = setOf(TvType.TvSeries, TvType.Movie, TvType.Anime)
     override var lang = "tr"
